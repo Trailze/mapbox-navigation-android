@@ -104,6 +104,7 @@ class MapboxNavigationTest {
         mockk(relaxUnitFun = true)
     private val routeProgress: RouteProgress = mockk(relaxed = true)
     private val navigationSession: NavigationSession = mockk(relaxUnitFun = true)
+    private val billingController: BillingController = mockk(relaxUnitFun = true)
     private val logger: Logger = mockk(relaxUnitFun = true)
     private lateinit var rerouteController: RerouteController
     private lateinit var navigationOptions: NavigationOptions
@@ -182,17 +183,19 @@ class MapboxNavigationTest {
         mockTripSession()
         mockDirectionSession()
         mockNavigationSession()
+        every {
+            NavigationComponentProvider.createBillingController(any(), any(), any())
+        } returns billingController
 
         every { navigator.create(any(), any(), any(), any(), any()) } returns navigator
-
-        mapboxNavigation = MapboxNavigation(navigationOptions)
-
-        rerouteController = mockk(relaxUnitFun = true)
-        mapboxNavigation.setRerouteController(rerouteController)
     }
 
     @After
     fun tearDown() {
+        if (this::mapboxNavigation.isInitialized) {
+            mapboxNavigation.onDestroy()
+        }
+
         unmockkObject(MapboxSDKCommon)
         unmockkObject(MapboxModuleProvider)
         unmockkObject(LoggerProvider)
@@ -206,57 +209,53 @@ class MapboxNavigationTest {
 
     @Test
     fun sanity() {
+        createMapboxNavigation()
         assertNotNull(mapboxNavigation)
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
-    fun init_routesObs_internalRouteObs_navigationSession_and_TelemetryLocAndProgressDisptchr() {
+    fun init_routesObs_internalRouteObs_navigationSession_and_TelemetryLocAndProgressDispatcher() {
+        createMapboxNavigation()
         verify(exactly = 3) { directionsSession.registerRoutesObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun init_registerOffRouteObserver() {
+        createMapboxNavigation()
         verify(exactly = 2) { tripSession.registerOffRouteObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun destroy_unregisterOffRouteObserver() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterOffRouteObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun init_registerOffRouteObserver_MapboxNavigation_recreated() {
+        createMapboxNavigation()
+        mapboxNavigation.onDestroy()
         ThreadController.cancelAllUICoroutines()
         val navigationOptions = provideNavigationOptions().build()
 
         mapboxNavigation = MapboxNavigation(navigationOptions)
 
         verify(exactly = 4) { tripSession.registerOffRouteObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun destroy_unregisterOffRouteObserver_MapboxNavigation_recreated() {
+        createMapboxNavigation()
+        mapboxNavigation.onDestroy()
         ThreadController.cancelAllUICoroutines()
         val navigationOptions = provideNavigationOptions().build()
         mapboxNavigation = MapboxNavigation(navigationOptions)
 
         mapboxNavigation.onDestroy()
 
-        verify(exactly = 1) { tripSession.unregisterOffRouteObserver(any()) }
-
-        mapboxNavigation.onDestroy()
+        verify(exactly = 2) { tripSession.unregisterOffRouteObserver(any()) }
     }
 
     @Test
@@ -315,6 +314,7 @@ class MapboxNavigationTest {
 
     @Test
     fun registerMapMatcherResultObserver() {
+        createMapboxNavigation()
         val observer: MapMatcherResultObserver = mockk()
         mapboxNavigation.registerMapMatcherResultObserver(observer)
 
@@ -323,6 +323,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterMapMatcherResultObserver() {
+        createMapboxNavigation()
         val observer: MapMatcherResultObserver = mockk()
         mapboxNavigation.unregisterMapMatcherResultObserver(observer)
 
@@ -331,20 +332,19 @@ class MapboxNavigationTest {
 
     @Test
     fun init_registerStateObserver_navigationSession() {
+        createMapboxNavigation()
         verify(exactly = 1) { tripSession.registerStateObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun init_registerNavigationSessionStateObserver() {
+        createMapboxNavigation()
         verify(exactly = 1) { navigationSession.registerNavigationSessionStateObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun onDestroy_unregisters_DirectionSession_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { directionsSession.unregisterAllRoutesObservers() }
@@ -352,6 +352,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroy_unregisters_TripSession_location_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllLocationObservers() }
@@ -359,6 +360,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroy_unregisters_TripSession_routeProgress_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllRouteProgressObservers() }
@@ -366,6 +368,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroy_unregisters_TripSession_offRoute_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllOffRouteObservers() }
@@ -373,6 +376,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroy_unregisters_TripSession_state_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllStateObservers() }
@@ -380,6 +384,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroy_unregisters_TripSession_routeAlerts_observers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllRoadObjectsOnRouteObservers() }
@@ -387,6 +392,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroySetsRoutesToEmpty() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { directionsSession.routes = emptyList() }
@@ -394,6 +400,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroyCallsTripSessionStop() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.stop() }
@@ -401,6 +408,7 @@ class MapboxNavigationTest {
 
     @Test
     fun onDestroyCallsNativeNavigatorReset() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { navigator.resetRideSession() }
@@ -408,6 +416,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllBannerInstructionsObservers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllBannerInstructionsObservers() }
@@ -415,6 +424,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllVoiceInstructionsObservers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllVoiceInstructionsObservers() }
@@ -422,6 +432,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllNavigationSessionStateObservers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { navigationSession.unregisterAllNavigationSessionStateObservers() }
@@ -429,6 +440,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllMapMatcherResultObservers() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllMapMatcherResultObservers() }
@@ -436,6 +448,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllTelemetryObservers() {
+        createMapboxNavigation()
         mockkObject(MapboxNavigationTelemetry)
 
         mapboxNavigation.onDestroy()
@@ -447,6 +460,7 @@ class MapboxNavigationTest {
 
     @Test
     fun unregisterAllTelemetryObserversIsCalledAfterTripSessionStop() {
+        createMapboxNavigation()
         mockkObject(MapboxNavigationTelemetry)
 
         mapboxNavigation.onDestroy()
@@ -461,44 +475,41 @@ class MapboxNavigationTest {
 
     @Test
     fun routeAlternatives_noRouteOptions_noRequest() {
+        createMapboxNavigation()
         every { directionsSession.getPrimaryRouteOptions() } returns null
         verify(exactly = 0) { directionsSession.requestRoutes(any(), any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun routeAlternatives_noEnhancedLocation_noRequest() {
+        createMapboxNavigation()
         every { tripSession.getEnhancedLocation() } returns null
         verify(exactly = 0) { directionsSession.requestRoutes(any(), any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun arrival_controller_register() {
+        createMapboxNavigation()
         val arrivalController: ArrivalController = mockk()
 
         mapboxNavigation.setArrivalController(arrivalController)
 
         verify { tripSession.registerRouteProgressObserver(any<ArrivalProgressObserver>()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun arrival_controller_unregister() {
+        createMapboxNavigation()
         val arrivalController: ArrivalController? = null
 
         mapboxNavigation.setArrivalController(arrivalController)
 
         verify { tripSession.unregisterRouteProgressObserver(any<ArrivalProgressObserver>()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun offroute_lead_to_reroute() {
+        createMapboxNavigation()
         val observers = mutableListOf<OffRouteObserver>()
         verify { tripSession.registerOffRouteObserver(capture(observers)) }
 
@@ -511,24 +522,22 @@ class MapboxNavigationTest {
             tripSession.registerOffRouteObserver(any())
             rerouteController.reroute(any())
         }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun reRoute_not_called() {
+        createMapboxNavigation()
         val offRouteObserverSlot = slot<OffRouteObserver>()
         verify { tripSession.registerOffRouteObserver(capture(offRouteObserverSlot)) }
 
         offRouteObserverSlot.captured.onOffRouteStateChanged(false)
 
         verify(exactly = 0) { rerouteController.reroute(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun internalRouteObserver_notEmpty() {
+        createMapboxNavigation()
         val primary: DirectionsRoute = mockk()
         val secondary: DirectionsRoute = mockk()
         val routes = listOf(primary, secondary)
@@ -540,12 +549,11 @@ class MapboxNavigationTest {
         }
 
         verify { tripSession.route = primary }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun internalRouteObserver_empty() {
+        createMapboxNavigation()
         val routes = emptyList<DirectionsRoute>()
         val routeObserversSlot = mutableListOf<RoutesObserver>()
         verify { directionsSession.registerRoutesObserver(capture(routeObserversSlot)) }
@@ -555,49 +563,45 @@ class MapboxNavigationTest {
         }
 
         verify { tripSession.route = null }
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `don't interrupt reroute requests on a standalone route request`() {
+        createMapboxNavigation()
         every { directionsSession.requestRoutes(any(), any()) } returns 1L
         mapboxNavigation.requestRoutes(mockk(), mockk())
 
         verify(exactly = 0) { rerouteController.interrupt() }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun interrupt_reroute_on_set_routes() {
+        createMapboxNavigation()
         mapboxNavigation.setRoutes(listOf())
 
         verify(exactly = 1) { rerouteController.interrupt() }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `don't interrupt route alternatives on a standalone route request`() {
+        createMapboxNavigation()
         every { directionsSession.requestRoutes(any(), any()) } returns 1L
         mapboxNavigation.requestRoutes(mockk(), mockk())
 
         verify(exactly = 0) { routeAlternativesController.interrupt() }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `interrupt route alternatives on set route`() {
+        createMapboxNavigation()
         mapboxNavigation.setRoutes(listOf())
 
         verify(exactly = 1) { routeAlternativesController.interrupt() }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun interrupt_reroute_process_when_new_reroute_controller_has_been_set() {
+        createMapboxNavigation()
         val newRerouteController: RerouteController = mockk(relaxUnitFun = true)
         val observers = mutableListOf<OffRouteObserver>()
         verify { tripSession.registerOffRouteObserver(capture(observers)) }
@@ -616,12 +620,11 @@ class MapboxNavigationTest {
             rerouteController.interrupt()
             newRerouteController.reroute(any())
         }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `road objects observer is registered in the trip session`() {
+        createMapboxNavigation()
         val observer: RoadObjectsOnRouteObserver = mockk()
 
         mapboxNavigation.registerRoadObjectsOnRouteObserver(observer)
@@ -631,6 +634,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `road objects observer is unregistered in the trip session`() {
+        createMapboxNavigation()
         val observer: RoadObjectsOnRouteObserver = mockk()
 
         mapboxNavigation.unregisterRoadObjectsOnRouteObserver(observer)
@@ -640,6 +644,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `resetTripSession should reset the navigator`() {
+        createMapboxNavigation()
         mapboxNavigation.resetTripSession()
 
         verify { navigator.resetRideSession() }
@@ -661,8 +666,6 @@ class MapboxNavigationTest {
         mapboxNavigation = MapboxNavigation(options)
 
         assertTrue(slot.captured.tilesPath.endsWith(RoutingTilesFiles.TILES_PATH_SUB_DIR))
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -686,8 +689,6 @@ class MapboxNavigationTest {
         mapboxNavigation = MapboxNavigation(options)
 
         assertEquals(slot.captured.endpointConfig!!.dataset, "someUser.osm/truck")
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -703,8 +704,6 @@ class MapboxNavigationTest {
         mapboxNavigation = MapboxNavigation(navigationOptions)
 
         assertNull(slot.captured.incidentsOptions)
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -728,8 +727,6 @@ class MapboxNavigationTest {
 
         assertEquals(slot.captured.incidentsOptions!!.graph, "graph")
         assertEquals(slot.captured.incidentsOptions!!.apiUrl, "")
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -753,12 +750,11 @@ class MapboxNavigationTest {
 
         assertEquals(slot.captured.incidentsOptions!!.apiUrl, "apiUrl")
         assertEquals(slot.captured.incidentsOptions!!.graph, "")
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `setRoute pushes the route to the directions session`() {
+        createMapboxNavigation()
         val route: DirectionsRoute = mockk()
         val routeOptions: RouteOptions = mockk()
         every { route.routeOptions() } returns routeOptions
@@ -776,6 +772,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `requestRoutes pushes the request to the directions session`() {
+        createMapboxNavigation()
         val options = mockk<RouteOptions>()
         val callback = mockk<RouterCallback>()
         every { directionsSession.requestRoutes(options, callback) } returns 1L
@@ -786,6 +783,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `requestRoutes passes back the request id`() {
+        createMapboxNavigation()
         val expected = 1L
         val options = mockk<RouteOptions>()
         val callback = mockk<RouterCallback>()
@@ -798,6 +796,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `requestRoutes doesn't pushes the route to the directions session automatically`() {
+        createMapboxNavigation()
         val routes = listOf(mockk<DirectionsRoute>())
         val options = mockk<RouteOptions>()
         val possibleInternalCallbackSlot = slot<RouterCallback>()
@@ -813,6 +812,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `cancelRouteRequest pushes the data to directions session`() {
+        createMapboxNavigation()
         mapboxNavigation.cancelRouteRequest(1L)
 
         verify(exactly = 1) { directionsSession.cancelRouteRequest(1L) }
@@ -820,6 +820,7 @@ class MapboxNavigationTest {
 
     @Test
     fun `directions session is shutdown onDestroy`() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { directionsSession.shutdown() }
@@ -827,13 +828,13 @@ class MapboxNavigationTest {
 
     @Test
     fun `register internalFallbackVersionsObserver`() {
+        createMapboxNavigation()
         verify(exactly = 1) { tripSession.registerFallbackVersionsObserver(any()) }
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
     fun `unregisterAllFallbackVersionsObservers on destroy`() {
+        createMapboxNavigation()
         mapboxNavigation.onDestroy()
 
         verify(exactly = 1) { tripSession.unregisterAllFallbackVersionsObservers() }
@@ -861,8 +862,6 @@ class MapboxNavigationTest {
 
         assertEquals(tilesVersion, slot.captured.endpointConfig?.version)
         assertFalse(slot.captured.endpointConfig?.isFallback!!)
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -897,8 +896,6 @@ class MapboxNavigationTest {
 
         assertEquals(latestTilesVersion, tileConfigSlot.captured.endpointConfig?.version)
         assertTrue(tileConfigSlot.captured.endpointConfig?.isFallback!!)
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -929,8 +926,6 @@ class MapboxNavigationTest {
 
         assertEquals("", tileConfigSlot.captured.endpointConfig?.version)
         assertFalse(tileConfigSlot.captured.endpointConfig?.isFallback!!)
-
-        mapboxNavigation.onDestroy()
     }
 
     @Test
@@ -958,8 +953,95 @@ class MapboxNavigationTest {
         coVerify {
             navigator.setRoute(route, index)
         }
+    }
 
+    @Test
+    fun `verify that session is idle when MapboxNavigation is destroyed`() = runBlocking {
+        val localNavigationSession = NavigationSession()
+        every { NavigationComponentProvider.createNavigationSession() } answers {
+            localNavigationSession
+        }
+
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+        mapboxNavigation.startTripSession()
+
+        var state: NavigationSession.State? = null
+
+        localNavigationSession.registerNavigationSessionStateObserver {
+            state = it
+        }
+
+        assertEquals(NavigationSession.State.IDLE, state)
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `verify that only one instance of MapboxNavigation can be alive`() = runBlocking {
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+    }
+
+    @Test
+    fun `verify that MapboxNavigation instance can be recreated`() = runBlocking {
+        val firstInstance = MapboxNavigation(navigationOptions)
+        firstInstance.onDestroy()
+        val secondInstance = MapboxNavigation(navigationOptions)
+
+        assertNotNull(secondInstance)
+        secondInstance.onDestroy()
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `verify that startTripSession is not called when destroyed`() = runBlocking {
+        val localNavigationSession = NavigationSession()
+        every { NavigationComponentProvider.createNavigationSession() } answers {
+            localNavigationSession
+        }
+
+        mapboxNavigation = MapboxNavigation(navigationOptions)
         mapboxNavigation.onDestroy()
+        mapboxNavigation.startTripSession()
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `verify that resumeSession is not called when destroyed`() = runBlocking {
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+        mapboxNavigation.onDestroy()
+        mapboxNavigation.resumeTripSession()
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `verify that pauseSession is not called when destroyed`() = runBlocking {
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+        mapboxNavigation.onDestroy()
+        mapboxNavigation.pauseTripSession()
+    }
+
+    @Test
+    fun `verify that empty routes are not passed to the billing controller`() {
+        createMapboxNavigation()
+        mapboxNavigation.setRoutes(emptyList())
+
+        verify(exactly = 0) { billingController.onExternalRouteSet(any()) }
+    }
+
+    @Test
+    fun `external route is first provided to the billing controller before directions session`() {
+        createMapboxNavigation()
+        val routes = listOf(mockk<DirectionsRoute>())
+
+        mapboxNavigation.setRoutes(routes)
+
+        verifyOrder {
+            billingController.onExternalRouteSet(routes.first())
+            directionsSession.routes = routes
+        }
+    }
+
+    private fun createMapboxNavigation() {
+        mapboxNavigation = MapboxNavigation(navigationOptions)
+
+        rerouteController = mockk(relaxUnitFun = true)
+        mapboxNavigation.setRerouteController(rerouteController)
     }
 
     private fun mockLocation() {

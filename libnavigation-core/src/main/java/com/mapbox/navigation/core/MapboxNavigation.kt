@@ -183,6 +183,7 @@ class MapboxNavigation(
     private val tripService: TripService
     private val tripSession: TripSession
     private val navigationSession: NavigationSession
+    private val billingController: BillingController
     private val logger = LoggerProvider.logger
     private val connectivityHandler: ConnectivityHandler = ConnectivityHandler(
         logger,
@@ -273,7 +274,20 @@ class MapboxNavigation(
 
     private var reachabilityObserverId: Long? = null
 
+    private var isDestroyed = false
+
     init {
+        if (hasInstance) {
+            throw IllegalStateException(
+                """
+                    A different MapboxNavigation instance already exists.
+                    Make sure to destroy it with #onDestroy before creating a new one.
+                    Also see MapboxNavigationProvider for instance management assistance.
+                """.trimIndent()
+            )
+        }
+        hasInstance = true
+
         ThreadController.init()
         navigator = NavigationComponentProvider.createNativeNavigator(
             navigationOptions.deviceProfile,
@@ -316,6 +330,12 @@ class MapboxNavigation(
             logger = logger,
         )
         tripSession.registerStateObserver(navigationSession)
+
+        billingController = NavigationComponentProvider.createBillingController(
+            navigationOptions.accessToken,
+            navigationSession,
+            tripSession
+        )
 
         arrivalProgressObserver = ArrivalProgressObserver(tripSession)
         setArrivalController()
@@ -390,9 +410,11 @@ class MapboxNavigation(
      */
     @RequiresPermission(anyOf = [ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION])
     fun startTripSession() {
-        tripSession.start()
-        notificationChannelField?.let {
-            monitorNotificationActionButton(it.get(null) as ReceiveChannel<NotificationAction>)
+        runIfNotDestroyed {
+            tripSession.start()
+            notificationChannelField?.let {
+                monitorNotificationActionButton(it.get(null) as ReceiveChannel<NotificationAction>)
+            }
         }
     }
 
@@ -412,6 +434,18 @@ class MapboxNavigation(
      */
     fun resetTripSession() {
         navigator.resetRideSession()
+    }
+
+    fun pauseTripSession() {
+        runIfNotDestroyed {
+            billingController.pauseSession()
+        }
+    }
+
+    fun resumeTripSession() {
+        runIfNotDestroyed {
+            billingController.resumeSession()
+        }
     }
 
     /**
@@ -480,6 +514,9 @@ class MapboxNavigation(
      * @see [requestRoutes]
      */
     fun setRoutes(routes: List<DirectionsRoute>) {
+        if (routes.isNotEmpty()) {
+            billingController.onExternalRouteSet(routes.first())
+        }
         rerouteController?.interrupt()
         routeAlternativesController.interrupt()
         routeRefreshController.restart()
@@ -529,6 +566,9 @@ class MapboxNavigation(
             ReachabilityService.removeReachabilityObserver(it)
             reachabilityObserverId = null
         }
+
+        isDestroyed = true
+        hasInstance = false
     }
 
     /**
@@ -1072,7 +1112,25 @@ class MapboxNavigation(
         )
     }
 
+    private fun runIfNotDestroyed(block: () -> Any?) {
+        when (isDestroyed) {
+            false -> {
+                block()
+            }
+            true -> {
+                throw IllegalStateException(
+                    """
+                        This instance of MapboxNavigation is destroyed.
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
     private companion object {
+        @Volatile
+        private var hasInstance = false
+
         private val TAG = Tag("MbxNavigation")
         private const val USER_AGENT: String = "MapboxNavigationNative"
         private const val THREADS_COUNT = 2

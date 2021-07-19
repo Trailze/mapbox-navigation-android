@@ -61,4 +61,10 @@ internal object NavigationComponentProvider {
     )
 
     fun createNavigationSession(): NavigationSession = NavigationSession()
+
+    fun createBillingController(
+        accessToken: String?,
+        navigationSession: NavigationSession,
+        tripSession: TripSession
+    ): BillingController = BillingController(accessToken.toString(), navigationSession, tripSession)
 }

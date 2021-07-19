@@ -10,8 +10,8 @@ internal class NavigationSession : RoutesObserver, TripSessionStateObserver {
 
     private val stateObservers = CopyOnWriteArraySet<NavigationSessionStateObserver>()
 
-    private var state = State.IDLE
-        set(value) {
+    var state = State.IDLE
+        private set(value) {
             if (field == value) {
                 return
             }
