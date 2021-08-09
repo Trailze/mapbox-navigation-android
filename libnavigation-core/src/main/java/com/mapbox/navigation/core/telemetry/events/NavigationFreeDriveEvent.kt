@@ -26,11 +26,13 @@ internal class NavigationFreeDriveEvent(
     var locationEngine: String? = null
     var percentTimeInPortrait: Int = 0
     var percentTimeInForeground: Int = 0
-    var sessionIdentifier: String? = null
     var simulation: Boolean = false
 
     // Schema pattern TelemetryUtils.obtainCurrentDate() - Timestamp when user started navigation
-    var startTimestamp: String? = null
+    var navigatorSessionIdentifier: String? = null // group id of modes under one Telemetry session
+    var startTimestamp: String? = null // mode start time
+    var sessionIdentifier: String? = null // mode id
+
     var location: TelemetryLocation? = null
     var eventType: String? = null
 

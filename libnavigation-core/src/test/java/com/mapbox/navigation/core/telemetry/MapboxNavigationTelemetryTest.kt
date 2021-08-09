@@ -180,6 +180,58 @@ class MapboxNavigationTelemetryTest {
         unmockkObject(ThreadController)
     }
 
+    fun `telemetry idle before call initialize`() {
+        baseMock()
+
+        updateSessionState(ACTIVE_GUIDANCE)
+        updateRouteProgress()
+        updateSessionState(FREE_DRIVE)
+        updateRoute(originalRoute)
+        updateRouteProgress()
+        updateRoute(anotherRoute)
+        arrive()
+
+        captureAndVerifyMetricsReporter(0)
+    }
+
+    @Test
+    fun `telemetry identifier is retained`() {
+        baseMock()
+
+        initTelemetry()
+        updateSessionState(ACTIVE_GUIDANCE)
+        updateRoute(originalRoute)
+        updateRouteProgress()
+        resetTelemetry()
+
+        mockAnotherRoute()
+        initTelemetry()
+        updateSessionState(ACTIVE_GUIDANCE)
+        updateRoute(anotherRoute)
+        updateRouteProgress()
+
+        val events = captureAndVerifyMetricsReporter(5)
+        checkIdentifiersNavSessions(events.subList(0, 3), events.subList(3, 5))
+    }
+
+    fun `telemetry idle after call destroy`() {
+        baseMock()
+
+        initTelemetry()
+        resetTelemetry()
+        updateSessionState(ACTIVE_GUIDANCE)
+        updateRouteProgress()
+        updateSessionState(FREE_DRIVE)
+        updateSessionState(IDLE)
+        updateRoute(originalRoute)
+        updateRouteProgress()
+        updateRoute(anotherRoute)
+        arrive()
+
+        val events = captureAndVerifyMetricsReporter(1)
+        assertTrue(events[0] is NavigationAppUserTurnstileEvent)
+    }
+
     @Test
     fun turnstileEvent_sent_on_telemetry_init() {
         baseMock()
@@ -360,8 +412,11 @@ class MapboxNavigationTelemetryTest {
         postUserFeedback()
         postUserFeedback()
         updateSessionState(FREE_DRIVE)
+        postUserFeedback()
+        postUserFeedback()
+        resetTelemetry()
 
-        val events = captureAndVerifyMetricsReporter(exactly = 10)
+        val events = captureAndVerifyMetricsReporter(exactly = 13)
         assertTrue(events[0] is NavigationAppUserTurnstileEvent)
         assertTrue(events[1] is NavigationDepartEvent)
         assertTrue(events[2] is NavigationFeedbackEvent)
@@ -372,7 +427,10 @@ class MapboxNavigationTelemetryTest {
         assertTrue(events[7] is NavigationFeedbackEvent)
         assertTrue(events[8] is NavigationCancelEvent)
         assertTrue(events[9] is NavigationFreeDriveEvent)
-        assertEquals(10, events.size)
+        assertTrue(events[10] is NavigationFeedbackEvent)
+        assertTrue(events[11] is NavigationFeedbackEvent)
+        assertTrue(events[12] is NavigationCancelEvent)
+        assertEquals(13, events.size)
     }
 
     @Test
@@ -1123,7 +1181,7 @@ class MapboxNavigationTelemetryTest {
     }
 
     private fun resetTelemetry() {
-        MapboxNavigationTelemetry.unregisterListeners(mapboxNavigation)
+        MapboxNavigationTelemetry.destroy(mapboxNavigation)
     }
 
     private fun onInit(block: () -> Unit) {
@@ -1238,5 +1296,111 @@ class MapboxNavigationTelemetryTest {
         assertEquals(currentRoute.distance().toInt(), event.estimatedDistance)
         assertEquals(currentRoute.duration().toInt(), event.estimatedDuration)
         assertEquals(obtainStepCount(currentRoute), event.totalStepCount)
+    }
+
+    private fun checkIdentifiersNavSessions(
+        firstSessionEvents: List<MetricEvent>, secondSessionEvents: List<MetricEvent> = emptyList()
+    ) {
+
+        fun List<MetricEvent>.toPair(): List<Pair<String, String>> {
+            return this.mapNotNull { event ->
+                when (event) {
+                    is NavigationAppUserTurnstileEvent -> null
+                    is NavigationEvent -> event.navigatorSessionIdentifier!! to event.toString()
+                    is NavigationFreeDriveEvent -> event.navigatorSessionIdentifier!! to event.toString()
+                    else -> throw IllegalArgumentException("Unknown event: ${event.javaClass.name}")
+                }
+            }
+        }
+
+        val groupSessions = listOf(firstSessionEvents.toPair(), secondSessionEvents.toPair())
+            .filter { it.isNotEmpty() }
+
+        val sessionsIds = mutableListOf<String>()
+
+        groupSessions.forEach { sessionsElements ->
+            sessionsElements.reduce { acc, pair ->
+                assertTrue(
+                    "navSessionIdentifier equals for all events under this session",
+                    acc.first == pair.first
+                )
+                return@reduce pair
+            }.also { (navSessionId, _) ->
+                sessionsIds.add(navSessionId)
+            }
+        }
+
+        if (sessionsIds.size > 1) {
+            assertTrue(
+                sessionsIds[0] != sessionsIds[1]
+            )
+        }
+    }
+
+    private fun checkSameSessionsEvents(vararg events: List<MetricEvent>) {
+        val reducedSessionEvents = events.map { checkSameSessionEvents(it) }
+
+        reducedSessionEvents.reduce { acc, sessionEventCompareData ->
+
+            return@reduce sessionEventCompareData
+        }
+    }
+
+    private fun checkSameSessionEvents(events: List<MetricEvent>): SessionEventCompareData {
+        val compareData = events.asSessionEventCompareData()
+
+        return compareData.reduce { acc, sessionEventCompareData ->
+            assertEquals(
+                acc.navigatorSessionIdentifier, sessionEventCompareData.navigatorSessionIdentifier
+            )
+            assertEquals(
+                acc.sessionIdentifier, sessionEventCompareData.sessionIdentifier
+            )
+            assertEquals(
+                acc.startTimestamp, sessionEventCompareData.startTimestamp
+            )
+            if (
+                sessionEventCompareData.driverModeName != SessionEventCompareData.NO_DRIVER_MODE &&
+                acc.driverModeName != SessionEventCompareData.NO_DRIVER_MODE
+            ) {
+                assertEquals(acc.driverModeName, sessionEventCompareData.driverModeName)
+            }
+            return@reduce sessionEventCompareData
+        }
+    }
+
+    private fun List<MetricEvent>.asSessionEventCompareData(): List<SessionEventCompareData> {
+        return this.mapNotNull { event ->
+            when (event) {
+                is NavigationAppUserTurnstileEvent -> null
+                is NavigationEvent -> SessionEventCompareData(
+                    event.navigatorSessionIdentifier!!,
+                    event.sessionIdentifier!!,
+                    event.driverMode!!,
+                    event.startTimestamp!!,
+                    event.toString()
+                )
+                is NavigationFreeDriveEvent -> SessionEventCompareData(
+                    event.navigatorSessionIdentifier!!,
+                    event.sessionIdentifier!!,
+                    SessionEventCompareData.NO_DRIVER_MODE,
+                    event.startTimestamp!!,
+                    event.toString()
+                )
+                else -> throw IllegalArgumentException("Unknown event: ${event.javaClass.name}")
+            }
+        }
+    }
+
+    private data class SessionEventCompareData(
+        val navigatorSessionIdentifier: String,
+        val sessionIdentifier: String, // driver mode start time
+        val driverModeName: String = NO_DRIVER_MODE,
+        val startTimestamp: String, // driver mode start time
+        val metadata: String, // debug info: event.toString()
+    ) {
+        companion object {
+            const val NO_DRIVER_MODE = "NO_DRIVER_MODE"
+        }
     }
 }

@@ -32,10 +32,13 @@ internal abstract class NavigationEvent(
     val applicationState: String = phoneState.applicationState // Schema minLength 1
     val event: String = getEventName()
 
-    // Schema pattern TelemetryUtils.obtainCurrentDate() - Timestamp when user started navigation
-    var startTimestamp: String? = null
     var sdkIdentifier: String? = null
-    var sessionIdentifier: String? = null
+
+    // Schema pattern TelemetryUtils.obtainCurrentDate() - Timestamp when user started navigation
+    var navigatorSessionIdentifier: String? = null // group id of modes under one Telemetry session
+    var startTimestamp: String? = null // mode start time
+    var driverMode: String? = null // mode type [trip, freeDrive]
+    var sessionIdentifier: String? = null // mode id
     var geometry: String? = null
     var profile: String? = null
     var originalRequestIdentifier: String? = null
