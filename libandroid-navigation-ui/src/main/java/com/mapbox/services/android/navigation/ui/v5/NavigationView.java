@@ -71,18 +71,18 @@ public class NavigationView extends CoordinatorLayout implements LifecycleOwner,
 
   private static final String MAP_INSTANCE_STATE_KEY = "navgation_mapbox_map_instance_state";
   private static final int INVALID_STATE = 0;
-  private MapView mapView;
-  private InstructionView instructionView;
-  private SummaryBottomSheet summaryBottomSheet;
+  public MapView mapView;
+  public InstructionView instructionView;
+  public SummaryBottomSheet summaryBottomSheet;
   private BottomSheetBehavior summaryBehavior;
-  private ImageButton cancelBtn;
-  private RecenterButton recenterBtn;
+  public ImageButton cancelBtn;
+  public RecenterButton recenterBtn;
   private WayNameView wayNameView;
-  private ImageButton routeOverviewBtn;
+  public ImageButton routeOverviewBtn;
 
   private NavigationPresenter navigationPresenter;
   private NavigationViewEventDispatcher navigationViewEventDispatcher;
-  private NavigationViewModel navigationViewModel;
+  public NavigationViewModel navigationViewModel;
   private NavigationMapboxMap navigationMap;
   private OnNavigationReadyCallback onNavigationReadyCallback;
   private NavigationOnCameraTrackingChangedListener onTrackingChangedListener;
