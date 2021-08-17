@@ -32,7 +32,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="top"
-            app:layout_anchor="@id/autocompleteBottomSheet"
             app:layout_anchorGravity="top|start">
 
             <ImageView
@@ -63,7 +62,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="top"
-            app:layout_anchor="@id/autocompleteBottomSheet"
             app:layout_anchorGravity="top|end">
 
             <android.support.design.widget.FloatingActionButton
@@ -111,40 +109,6 @@
             android:layout_gravity="top"
             android:visibility="invisible"/>
 
-        <android.support.constraint.ConstraintLayout
-            android:id="@+id/autocompleteBottomSheet"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginStart="@dimen/autocomplete_bottomsheet_margin"
-            android:layout_marginEnd="@dimen/autocomplete_bottomsheet_margin"
-            android:background="@drawable/autocomplete_bottomsheet_background"
-            android:elevation="@dimen/autocomplete_bottomsheet_elevation"
-            android:paddingTop="@dimen/autocomplete_bottomsheet_padding"
-            android:paddingBottom="@dimen/autocomplete_bottomsheet_padding"
-            app:behavior_hideable="true"
-            app:layout_behavior="@string/autocompleteBehavior">
-
-            <android.support.v7.widget.CardView
-                android:id="@+id/autocompleteCardView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="@dimen/autocomplete_cardview_margin"
-                app:cardCornerRadius="@dimen/autocomplete_cardview_corner_radius"
-                app:cardUseCompatPadding="true">
-
-                <com.mapbox.android.search.autocomplete.MapboxAutocompleteView
-                    android:id="@+id/autocompleteView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/white"
-                    android:hint="@string/hint_where_to"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:padding="@dimen/autocomplete_padding"/>
-
-            </android.support.v7.widget.CardView>
-
-        </android.support.constraint.ConstraintLayout>
 
     </android.support.design.widget.CoordinatorLayout>
 

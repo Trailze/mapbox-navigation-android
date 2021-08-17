@@ -25,8 +25,8 @@ import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.services.android.navigation.testapp.NavigationSettingsActivity
 import com.mapbox.services.android.navigation.testapp.R
 import com.mapbox.services.android.navigation.testapp.activity.HistoryActivity
-import com.mapbox.services.android.navigation.testapp.example.ui.autocomplete.AutoCompleteBottomSheetCallback
-import com.mapbox.services.android.navigation.testapp.example.ui.autocomplete.ExampleAutocompleteAdapter
+//import com.mapbox.services.android.navigation.testapp.example.ui.autocomplete.AutoCompleteBottomSheetCallback
+//import com.mapbox.services.android.navigation.testapp.example.ui.autocomplete.ExampleAutocompleteAdapter
 import com.mapbox.services.android.navigation.testapp.example.ui.permissions.PermissionRequestDialog
 import com.mapbox.services.android.navigation.testapp.example.utils.hideKeyboard
 import com.mapbox.services.android.navigation.testapp.example.utils.showKeyboard
@@ -121,7 +121,7 @@ class ExampleActivity : HistoryActivity(), ExampleView {
     }
   }
 
-  override fun onFeatureClicked(feature: CarmenFeature) {
+  fun onFeatureClicked(feature: CarmenFeature) {
     presenter.onDestinationFound(feature)
   }
 
@@ -176,18 +176,18 @@ class ExampleActivity : HistoryActivity(), ExampleView {
   }
 
   override fun updateAutocompleteBottomSheetState(state: Int) {
-    val behavior = BottomSheetBehavior.from(autocompleteBottomSheet)
-    behavior.state = state
+//    val behavior = BottomSheetBehavior.from(autocompleteBottomSheet)
+//    behavior.state = state
   }
 
   override fun updateAutocompleteProximity(location: Location?) {
-    autocompleteView.updateProximity(location)
+//    autocompleteView.updateProximity(location)
   }
 
   override fun selectAllAutocompleteText() {
-    if (autocompleteView.text.isNotEmpty()) {
-      autocompleteView.selectAll()
-    }
+//    if (autocompleteView.text.isNotEmpty()) {
+//      autocompleteView.selectAll()
+//    }
   }
 
   override fun updateLocationFabVisibility(visibility: Int) {
@@ -286,14 +286,14 @@ class ExampleActivity : HistoryActivity(), ExampleView {
     instructionView.retrieveFeedbackButton().hide()
     instructionView.retrieveSoundButton().hide()
 
-    val behavior = BottomSheetBehavior.from(autocompleteBottomSheet)
-    behavior.peekHeight = resources.getDimension(R.dimen.bottom_sheet_peek_height).toInt()
-    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
-    behavior.setBottomSheetCallback(AutoCompleteBottomSheetCallback(presenter))
+//    val behavior = BottomSheetBehavior.from(autocompleteBottomSheet)
+//    behavior.peekHeight = resources.getDimension(R.dimen.bottom_sheet_peek_height).toInt()
+//    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+//    behavior.setBottomSheetCallback(AutoCompleteBottomSheetCallback(presenter))
 
-    autocompleteView.setOnClickListener { presenter.onAutocompleteClick() }
-    autocompleteView.setAdapter(ExampleAutocompleteAdapter(this))
-    autocompleteView.setFeatureClickListener(this)
+//    autocompleteView.setOnClickListener { presenter.onAutocompleteClick() }
+//    autocompleteView.setAdapter(ExampleAutocompleteAdapter(this))
+//    autocompleteView.setFeatureClickListener(this)
 
     settingsFab.setOnClickListener { presenter.onSettingsFabClick() }
     locationFab.setOnClickListener { presenter.onLocationFabClick() }
