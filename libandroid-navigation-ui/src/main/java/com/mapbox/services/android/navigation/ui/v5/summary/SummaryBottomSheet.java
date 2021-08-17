@@ -39,15 +39,15 @@ import java.text.DecimalFormat;
 public class SummaryBottomSheet extends FrameLayout implements LifecycleObserver {
 
   private static final String EMPTY_STRING = "";
-  private TextView distanceRemainingText;
-  private TextView timeRemainingText;
-  private TextView arrivalTimeText;
-  private ProgressBar rerouteProgressBar;
+  public TextView distanceRemainingText;
+  public TextView timeRemainingText;
+  public TextView arrivalTimeText;
+  public ProgressBar rerouteProgressBar;
   private boolean isRerouting;
   @NavigationTimeFormat.Type
   private int timeFormatType;
   private DistanceFormatter distanceFormatter;
-  private NavigationViewModel navigationViewModel;
+  public NavigationViewModel navigationViewModel;
   private LifecycleOwner lifecycleOwner;
 
   public SummaryBottomSheet(Context context) {
