@@ -60,6 +60,8 @@ import com.mapbox.services.android.navigation.v5.utils.RouteUtils;
 
 import timber.log.Timber;
 
+import static com.mapbox.services.android.navigation.v5.navigation.NavigationConstants.STEP_MANEUVER_TYPE_ARRIVE;
+
 /**
  * A view that can be used to display upcoming maneuver information and control
  * voice instruction mute / unmute.
@@ -78,32 +80,34 @@ public class InstructionView extends RelativeLayout implements LifecycleObserver
 
   private static final String COMPONENT_TYPE_LANE = "lane";
 
-  private ManeuverView upcomingManeuverView;
-  private TextView upcomingDistanceText;
-  private TextView upcomingPrimaryText;
-  private TextView upcomingSecondaryText;
-  private ManeuverView subManeuverView;
-  private TextView subStepText;
-  private NavigationAlertView alertView;
-  private View rerouteLayout;
-  private View turnLaneLayout;
-  private View subStepLayout;
+  public ManeuverView upcomingManeuverView;
+  public TextView upcomingDistanceText;
+  public TextView upcomingPrimaryText;
+  public TextView upcomingSecondaryText;
+  public ManeuverView subManeuverView;
+  public TextView subStepText;
+  public TextView subStepAfter;
+  public String subStepAfterText = "";
+  public NavigationAlertView alertView;
+  public View rerouteLayout;
+  public View turnLaneLayout;
+  public View subStepLayout;
   private RecyclerView rvTurnLanes;
   private RecyclerView rvInstructions;
   private TurnLaneAdapter turnLaneAdapter;
   private ConstraintLayout instructionLayout;
   private LinearLayout instructionLayoutText;
-  private View instructionListLayout;
+  public View instructionListLayout;
   private InstructionListAdapter instructionListAdapter;
   private Animation rerouteSlideUpTop;
   private Animation rerouteSlideDownTop;
   private LegStep currentStep;
-  private NavigationViewModel navigationViewModel;
+  public NavigationViewModel navigationViewModel;
   private InstructionListListener instructionListListener;
 
   private DistanceFormatter distanceFormatter;
   private boolean isRerouting;
-  private SoundButton soundButton;
+  public SoundButton soundButton;
   private FeedbackButton feedbackButton;
   private LifecycleOwner lifecycleOwner;
 
@@ -138,6 +142,7 @@ public class InstructionView extends RelativeLayout implements LifecycleObserver
   @Override
   protected void onFinishInflate() {
     super.onFinishInflate();
+    System.out.println("Yoav - InstructionView:onFinishInflate()");
     bind();
     initializeBackground();
     initializeTurnLaneRecyclerView();
@@ -200,6 +205,9 @@ public class InstructionView extends RelativeLayout implements LifecycleObserver
           updateManeuverView(model.retrievePrimaryManeuverType(), model.retrievePrimaryManeuverModifier(),
             model.retrievePrimaryRoundaboutAngle(), model.retrieveDrivingSide());
           updateDataFromBannerText(model.retrievePrimaryBannerText(), model.retrieveSecondaryBannerText());
+          System.out.println("Yoav - updating bannerInstructionModel, setting subStepAfter");
+          System.out.println("Yoav - subStepAfterText = " + subStepAfterText);
+          subStepAfter.setText(subStepAfterText);
           updateSubStep(model.retrieveSubBannerText(), model.retrievePrimaryManeuverType());
         }
       }
@@ -428,12 +436,14 @@ public class InstructionView extends RelativeLayout implements LifecycleObserver
    * Finds and binds all necessary views
    */
   private void bind() {
+    System.out.println("Yoav - InstructionView:bind()");
     upcomingManeuverView = findViewById(R.id.maneuverView);
     upcomingDistanceText = findViewById(R.id.stepDistanceText);
     upcomingPrimaryText = findViewById(R.id.stepPrimaryText);
     upcomingSecondaryText = findViewById(R.id.stepSecondaryText);
     subManeuverView = findViewById(R.id.subManeuverView);
     subStepText = findViewById(R.id.subStepText);
+    subStepAfter = findViewById(R.id.subStepAfter);
     alertView = findViewById(R.id.alertView);
     rerouteLayout = findViewById(R.id.rerouteLayout);
     turnLaneLayout = findViewById(R.id.turnLaneLayout);
@@ -646,6 +656,11 @@ public class InstructionView extends RelativeLayout implements LifecycleObserver
     if (shouldShowSubStep(subText)) {
       String maneuverType = subText.type();
       String maneuverModifier = subText.modifier();
+      if (maneuverType != null && maneuverType.contentEquals(STEP_MANEUVER_TYPE_ARRIVE)) {
+        subStepAfter.setText("");
+      } else {
+        subStepAfter.setText(subStepAfterText);
+      }
       subManeuverView.setManeuverTypeAndModifier(maneuverType, maneuverModifier);
       Double roundaboutAngle = subText.degrees();
       if (roundaboutAngle != null) {
